@@ -3,3 +3,12 @@
   font-weight: normal;
   color: #fff;
 }
+
+body {
+  overflow: hidden;
+}
+
+.q-header, .q-footer {
+  background-color: #021421;
+  height: 3rem
+}

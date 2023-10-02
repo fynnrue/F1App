@@ -38,7 +38,13 @@ export default {
 </template>
 
 <style scoped>
+  @import './assets/main.css';
+
   .q-header {
     text-align: end;
+  }
+
+  .q-footer {
+    background-color: #021421;
   }
 </style>
