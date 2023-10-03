@@ -1,6 +1,9 @@
 <script lang="ts">
-import { defineComponent, ref } from "vue";
+import { defineComponent, watch, ref, onMounted } from "vue";
 import DriverDrawer from "@/components/DriverDrawer.vue";
+import api from "@/api/apiCalls";
+import type { Driver } from "@/types/driver";
+import type { Constructor } from "@/types/constructor";
 
 export default defineComponent({
     name: "HomeView",
@@ -10,15 +13,84 @@ export default defineComponent({
     setup() {
         const categoryToggle = ref(true);
         const period = ref(new Date().getFullYear());
+        const drivers = ref<Driver[]>([]);
+        const constructors = ref<Constructor[]>([]);
 
+        // change category between drivers and constructors overview
         function toggleCategory() {
             categoryToggle.value = !categoryToggle.value;
         }
 
+        // calculate age from date of birth
+        function calcAge(dateString: string) {
+            var birthday = +new Date(dateString);
+            return ~~((Date.now() - birthday) / 31557600000);
+        }
+
+        // fetch all drivers of a given year
+        function getAllDriversYear() {
+            const year = period.value;
+            if (year < 1950 || year > new Date().getFullYear()) return;
+            
+            const response = api.getDriverStandingsYear(year);
+            response.then((res) => {
+                const MRData = res.MRData;
+
+                drivers.value = MRData.StandingsTable.StandingsLists[0].DriverStandings.map((driverData: any) => ({
+                    code: driverData.Driver.code,
+                    firstName: driverData.Driver.givenName,
+                    lastName: driverData.Driver.familyName,
+                    nationality: driverData.Driver.nationality,
+                    team: driverData.Constructors[0].name,
+                    num: driverData.permanentNumber,
+                    age: calcAge(driverData.Driver.dateOfBirth),
+                    position: driverData.position,
+                    points: driverData.points,
+                    wins: driverData.wins,
+                }));
+
+                drivers.value.sort((a, b) => a.position - b.position);
+            });
+        }
+
+        // fetch all constructors of a given year
+        function getAllConstructorsYear() {
+            const year = period.value;
+            if (year < 1950 || year > new Date().getFullYear()) return;
+
+            const response = api.getConstructorStandingsYear(year);
+            response.then((res) => {
+                const MRData = res.MRData;
+
+                constructors.value = MRData.StandingsTable.StandingsLists[0].ConstructorStandings.map((constructorData: any) => ({
+                    id: constructorData.Constructor.constructorId,
+                    name: constructorData.Constructor.name,
+                    nationality: constructorData.Constructor.nationality,
+                    position: constructorData.position,
+                    points: constructorData.points,
+                    wins: constructorData.wins
+                }));
+
+                constructors.value.sort((a, b) => a.position - b.position);
+            });
+        }
+
+        watch(period, () => {
+            getAllDriversYear();
+            getAllConstructorsYear();
+        });
+
+        onMounted(() => {
+            getAllDriversYear();
+            getAllConstructorsYear();
+        });
+
         return {
             categoryToggle,
             toggleCategory,
-            period
+            period,
+            drivers,
+            constructors
         };
     },
 });
@@ -54,22 +126,22 @@ export default defineComponent({
             <!--Drivers-->
             <q-scroll-area style="height: 100vh; width: 80vw; margin: 0 auto;" v-if="categoryToggle">
                 <div class="cardsContainer" style="padding-bottom: 30vh;">
-                    <div v-for="i in 22" class="card">
+                    <div class="card" v-for="(driver) in drivers">
                         <div class="driverInfo">
                             <q-avatar class="avatar">
                                 <img src="https://cdn.quasar.dev/img/avatar.png" />
                             </q-avatar>
                             <div class="infoDetail">
-                                <div class="name">Name: Max Verstappen</div>
-                                <div class="age">Age: 23</div>
-                                <div class="team">Team: RedBull</div>
+                                <div class="name">Name: {{ driver.firstName }} {{ driver.lastName }}</div>
+                                <div class="nationality">Nationality: {{ driver.nationality }}</div>
+                                <div class="age">Age: {{ driver.age }}</div>
+                                <div class="team">Team: {{ driver.team }}</div>
                             </div>
                         </div>
                         <div class="stats">
-                            <div class="amntDriven stat">Races: 10</div>
-                            <div class="amntPodiums stat">Podiums: 1</div>
-                            <div class="amntWins stat">Wins: 1</div>
-                            <div class="amntPoints stat">Points: 35</div>
+                            <div class="amntWins stat">Wins: {{ driver.wins }}</div>
+                            <div class="amntPoints stat">Points: {{ driver.points }}</div>
+                            <div class="position stat">Position: {{ driver.position }}</div>
                         </div>
                     </div>
                 </div>
@@ -78,19 +150,20 @@ export default defineComponent({
             <!--Constructors-->
             <q-scroll-area style="height: 100vh; width: 80vw; margin: 0 auto;" v-if="!categoryToggle">
                 <div class="cardsContainer" style="padding-bottom: 30vh;">
-                    <div v-for="i in 10" class="card">
+                    <div v-for="team in constructors" class="card">
                         <div class="driverInfo">
                             <q-avatar class="avatar">
                                 <img src="https://cdn.quasar.dev/img/avatar.png" />
                             </q-avatar>
                             <div class="infoDetail">
-                                <div class="team">Name: Red Bull</div>
-                                <div class="driver">Driver 1: Max Verstappen</div>
-                                <div class="driver">Driver 2: Sergio Perez</div>
+                                <div class="team">Name: {{ team.name }}</div>
+                                <div class="team">Nationality: {{ team.nationality }}</div>
                             </div>
                         </div>
                         <div class="stats">
-                            <div class="amntPoints stat">Points: 100</div>
+                            <div class="amntWins stat">Wins: {{ team.wins }}</div>
+                            <div class="amntPoints stat">Points: {{ team.points }}</div>
+                            <div class="position stat">Position: {{ team.position }}</div>
                         </div>
                     </div>
                 </div>
