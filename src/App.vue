@@ -20,7 +20,7 @@ export default {
     <q-header elevated>
       <q-toolbar>
         <q-toolbar-title>
-          F1 Live Stats
+          F1 Stats
         </q-toolbar-title>
       </q-toolbar>
     </q-header>
